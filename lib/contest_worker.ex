@@ -1,15 +1,21 @@
 defmodule ContestDirWorker do
   use GenServer.Behaviour
 
-  defrecord DirWatcher, absolute_path: nil, files: [], interval: 1000
+  defrecord DirWatcher,
+    absolute_path: nil,
+    files: [],
+    interval: 1000,
+    regex: nil,
+    processor_pids: []
+
   defrecord FileMod, file_name: nil, mtime: nil
 
   def populate_files(in_dir) do
     { result, files } = :file.list_dir(in_dir)
 
-    # We don't deal with directories
+    # We only deal with regular files
     files = Enum.filter files, fn(f) ->
-      if(not File.dir?(f), do: f)
+      if(File.regular?(f), do: f)
     end
 
     # Note. This can (will?) fail if files is empty :(
@@ -25,7 +31,7 @@ defmodule ContestDirWorker do
 
   @doc "Init the contest worker to monitor a directory"
   def init({dir_path, interval}) do
-    if not File.dir?(dir_path) do
+    File.dir?(dir_path) do # TODO fix me, will not actually return here
       { :stop, dir_path <> " isn't actually a directory", DirWatcher.new() }
     end
 
@@ -45,7 +51,7 @@ defmodule ContestDirWorker do
       not List.member?(current_list, fm)
     end
 
-    Enum.map new_filemods, fn({FileMod, f, mt}) ->
+    Enum.map new_filemods, fn({FileMod, f, _}) ->
       f
     end
   end
@@ -66,7 +72,7 @@ defmodule ContestDirWorker do
     # Enum.map delta, do_processing(Path.absname(&1))
     Enum.map delta, fn(f) ->
       if f != nil and f != "" do
-        do_processing(Path.absname(f))
+        do_processing(Path.absname(f), config.processor_pids)
       end
     end
 
@@ -75,13 +81,11 @@ defmodule ContestDirWorker do
 
   @doc "Sends the file for processing if it is in our config.files"
   def handle_cast({:process, file_name}, config) do
-    # send the file off for processing if it is in our 
-    # config.files
     fm = get_filemod_with_filename(config.files, file_name)
 
     if fm != nil do
       #IO.puts "Ok will process: " <> inspect fm
-      do_processing(Path.absname(fm.file_name))
+      do_processing(Path.absname(fm.file_name), config.processor_pids)
     end
 
     { :noreply, config, config.interval }
@@ -93,11 +97,13 @@ defmodule ContestDirWorker do
     end
   end
 
-  def do_processing(of_file) do
+  def do_processing(of_file, with) do
     # TODO send message (containing of_file)
     # to another process that will actually
     # do something
     IO.puts "Hello. I am asked to process " <> (inspect of_file) <> ", but I have no power to do so. Sorry!"
+
+    Enum.map with, :gen_server.cast(&1, {:process, of_file})
   end
 
   def handle_cast(:stop, config) do
