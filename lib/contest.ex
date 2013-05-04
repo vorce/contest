@@ -13,6 +13,9 @@ defmodule Contest do
     Mix.env(:test)
     Mix.Project.refresh
     Mix.Task.run Mix.project[:prepare_task]
+    Mix.Task.run "loadpaths", ["--no-check"]
+    Mix.Task.reenable "loadpaths"
+    Mix.Task.reenable "deps.loadpaths"
 
     project = Mix.project
 
@@ -24,6 +27,7 @@ defmodule Contest do
     files = Mix.Utils.extract_files(test_paths, test_pattern)
 
     Kernel.ParallelRequire.files files
-    ExUnit.run
+    #ExUnit.run
+    #ExUnit.Server.cases ?!??
   end
 end

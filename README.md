@@ -2,6 +2,8 @@
 
 Continuous testing (ala infinitest) for Elixir
 
+Work in progress. Learning Elixir project.
+
 ## Design
 
 ### DirWorker
