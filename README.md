@@ -1,8 +1,10 @@
 # Contest
 
-Continuous testing (ala infinitest) for Elixir
+Contest is continuous testing (ala infinitest) for Elixir
 
 Work in progress. Learning Elixir project.
+
+Note: This has apparently already been done: https://github.com/ElixirCasts/apprentice
 
 ## Design
 
